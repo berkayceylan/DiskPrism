@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.name }}
+    runs-on: macos-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Release
+            options: -DCMAKE_BUILD_TYPE=Release
+          - name: Debug with ASan and UBSan
+            options: -DCMAKE_BUILD_TYPE=Debug -DENABLE_SANITIZERS=ON
+    steps:
+      - uses: actions/checkout@v7
+      - name: Toolchain
+        run: |
+          sw_vers
+          clang++ --version | head -1
+          cmake --version | head -1
+      - name: Configure
+        run: cmake -S . -B build ${{ matrix.options }}
+      - name: Build
+        run: cmake --build build -j "$(sysctl -n hw.ncpu)"
+      # Hosted runners are virtual machines. Wall-clock and frame-rate limits are relaxed
+      # when CI is set, and tests that need a Metal device or a window server say so and
+      # skip that part if there is none. Everything functional is still checked.
+      - name: Test
+        run: ctest --test-dir build --output-on-failure

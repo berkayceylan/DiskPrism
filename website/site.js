@@ -25,8 +25,15 @@ const sourceOf = ({ view, look, frame }) => `assets/img/${frame === "window" ? "
 function showShot() {
   const current = { ...shot, look: shot.look ?? root.dataset.theme };
   const base = sourceOf(current);
-  image.srcset = `${base}-1440.webp 1440w, ${base}.webp 2880w`;
-  image.src = `${base}-1440.webp`;
+  // The markup already picked the right picture for the system theme; only touch the image
+  // when something else is wanted, so nobody downloads a screenshot they never see.
+  const untouched = gallery.querySelector("source");
+  const system = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  if (!untouched || base !== sourceOf({ view: "treemap", look: system, frame: "window" })) {
+    untouched?.remove();
+    image.srcset = `${base}-1440.webp 1440w, ${base}.webp 2880w`;
+    image.src = `${base}-1440.webp`;
+  }
   image.alt = `DiskPrism ${current.view} in ${current.look} mode`;
   gallery.dataset.look = current.look;
   caption.textContent = CAPTION[current.frame];

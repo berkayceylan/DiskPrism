@@ -45,6 +45,7 @@
       <a href="#demo">Demo</a>
       <a href="#benchmarks">Benchmarks</a>
       <a href="#how">How it works</a>
+      <a href="#download">Download</a>
       <a href="#build">Build</a>
     </nav>
     <button class="icon-button" id="theme" type="button" aria-label="Switch theme"><svg class="icon sun" aria-hidden="true"><use href="#i-sun"/></svg><svg class="icon moon" aria-hidden="true"><use href="#i-moon"/></svg></button>
@@ -60,6 +61,7 @@
     <p class="lede">DiskPrism is a native macOS disk space analyzer. It scans with <code>getattrlistbulk</code>, draws a cushion treemap or a sunburst with Metal, and goes completely quiet when you stop moving.</p>
     <div class="actions">
       <a class="button primary" href="https://github.com/berkayceylan/DiskPrism"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>View on GitHub</a>
+      <a class="button" href="https://github.com/berkayceylan/DiskPrism/releases/latest">Download</a>
       <a class="button" href="#demo">Try the live demo</a>
       <a class="button" href="#build">Build from source</a>
     </div>
@@ -272,6 +274,19 @@
   </article>
 </section>
 
+<section class="wrap section" id="download">
+  <header class="section-head">
+    <h2>Download</h2>
+    <p>For macOS 14 or later. A workflow builds both apps from the tagged commit, and publishes them only if the tests pass on every system it tries.</p>
+  </header>
+  <a class="button primary" href="https://github.com/berkayceylan/DiskPrism/releases/latest">Latest release on GitHub</a>
+  <div class="notes">
+    <div><h3>Choose a file</h3><p><code>arm64</code> is for Apple silicon and unpacks to 612&nbsp;KiB. <code>x86_64</code> is for Intel and unpacks to 648&nbsp;KiB.</p></div>
+    <div><h3>First launch</h3><p>The app is signed ad hoc and not notarized by Apple, so macOS blocks it the first time. In System Settings, open Privacy &amp; Security, scroll down, click Open Anyway and confirm.</p></div>
+    <div><h3>Tested on</h3><p>Virtual machines with macOS 15, 26 and 27 on Apple silicon and macOS 15 on Intel. macOS 14 and the graphics drivers of physical Intel Macs are untested.</p></div>
+  </div>
+</section>
+
 <section class="wrap section" id="build">
   <header class="section-head">
     <h2>Build from source</h2>
@@ -285,7 +300,7 @@
     <div><h3>Run the tests</h3><div class="command"><code>ctest --test-dir build --output-on-failure</code><button type="button">Copy</button></div></div>
   </div>
   <div class="notes">
-    <div><h3>Signing</h3><p>The build signs the app ad hoc, on your own Mac. An app you build yourself opens normally. If you copy it to another Mac, Gatekeeper will ask for confirmation there.</p></div>
+    <div><h3>Signing</h3><p>The build signs the app ad hoc, on your own Mac. An app you build yourself opens normally. If you copy it to another Mac, macOS blocks the first launch there, as with a download.</p></div>
     <div><h3>Full Disk Access</h3><p>DiskPrism works without it. macOS then hides some protected folders, and the app tells you how many it skipped. If you grant it, macOS ties the permission to that build and may ask again after you rebuild.</p></div>
     <div><h3>If the C++ headers are missing</h3><p>Some Command Line Tools updates leave a stale <code>usr/include/c++</code> folder behind that hides the real headers. CMake detects this, warns, and builds against the SDK's headers.</p></div>
   </div>
@@ -297,6 +312,7 @@
     <span class="brand"><img src="assets/img/icon-64.png" width="22" height="22" alt="" loading="lazy"><span>DiskPrism</span></span>
     <nav aria-label="Project links">
       <a href="https://github.com/berkayceylan/DiskPrism">GitHub</a>
+      <a href="https://github.com/berkayceylan/DiskPrism/releases/latest">Releases</a>
       <a href="https://github.com/berkayceylan/DiskPrism/issues">Issues</a>
       <a href="https://github.com/berkayceylan/DiskPrism/blob/main/LICENSE">MIT License</a>
       <a href="https://github.com/berkayceylan/DiskPrism#readme">README</a>

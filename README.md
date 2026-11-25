@@ -1,8 +1,8 @@
 <p align="center"><img src="website/assets/img/icon-180.png" width="110" alt="DiskPrism icon"></p>
 <h1 align="center">DiskPrism</h1>
 <p align="center">A native macOS disk space analyzer that fits in 612 KiB.<br>C++20, AppKit and Metal. No dependencies.</p>
-<p align="center"><b><a href="https://berkayceylan.github.io/DiskPrism/">Website and live demo</a></b> &nbsp;·&nbsp; <a href="#build">Build</a> &nbsp;·&nbsp; <a href="#benchmarks">Benchmarks</a> &nbsp;·&nbsp; <a href="#how-it-works">How it works</a></p>
-<p align="center"><a href="https://github.com/berkayceylan/DiskPrism/actions/workflows/ci.yml"><img src="https://github.com/berkayceylan/DiskPrism/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="https://github.com/berkayceylan/DiskPrism/actions/workflows/pages.yml"><img src="https://github.com/berkayceylan/DiskPrism/actions/workflows/pages.yml/badge.svg" alt="Pages"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a></p>
+<p align="center"><b><a href="https://berkayceylan.github.io/DiskPrism/">Website and live demo</a></b> &nbsp;·&nbsp; <a href="#download">Download</a> &nbsp;·&nbsp; <a href="#build">Build</a> &nbsp;·&nbsp; <a href="#benchmarks">Benchmarks</a> &nbsp;·&nbsp; <a href="#how-it-works">How it works</a></p>
+<p align="center"><a href="https://github.com/berkayceylan/DiskPrism/releases/latest"><img src="https://img.shields.io/github/v/release/berkayceylan/DiskPrism" alt="Latest release"></a> <a href="https://github.com/berkayceylan/DiskPrism/actions/workflows/ci.yml"><img src="https://github.com/berkayceylan/DiskPrism/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="https://github.com/berkayceylan/DiskPrism/actions/workflows/pages.yml"><img src="https://github.com/berkayceylan/DiskPrism/actions/workflows/pages.yml/badge.svg" alt="Pages"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a></p>
 
 | | Dark | Light |
 | --- | --- | --- |
@@ -24,6 +24,17 @@ SwiftUI, package manager or third-party libraries.
 - Reveal in Finder, Quick Look, Copy Path, Open in Terminal and Move to Trash. Deleting updates the map without a rescan
 - Drag a folder or volume onto the window to scan it
 - Dark and light mode, and no frames drawn while nothing changes
+
+## Download
+
+Get the [latest release](https://github.com/berkayceylan/DiskPrism/releases/latest): the `arm64` zip for Apple silicon (612 KiB unpacked)
+or the `x86_64` zip for Intel (648 KiB). It needs macOS 14 or later.
+
+The app is signed ad hoc and not notarized by Apple, so macOS blocks the first launch. In System Settings, open Privacy &
+Security, scroll down, click **Open Anyway** and confirm. An app you build yourself opens normally.
+
+Before a release is published, its apps are tested in virtual machines with macOS 15, 26 and 27 on Apple silicon and
+macOS 15 on Intel. macOS 14 and the graphics drivers of physical Intel Macs are untested.
 
 ## Build
 
@@ -58,7 +69,7 @@ To scan a folder straight away, use `open -n build/DiskPrism.app --args /Applica
 and uses the SDK's headers instead.
 
 **Signing and Gatekeeper:** the build signs the app ad hoc, on your own Mac, so an app you built yourself opens
-normally. If you copy it to another Mac, Gatekeeper asks for confirmation there.
+normally. If you copy it to another Mac, macOS blocks the first launch there, as with a [download](#download).
 
 **Full Disk Access** is optional. Without it macOS hides some protected folders, and DiskPrism shows how many it
 skipped. Because the signature is ad hoc, macOS ties the permission to one build and may ask again after you rebuild.

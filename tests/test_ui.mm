@@ -1238,14 +1238,17 @@ DP_TEST(appearance_change_recolours_the_canvas) {
     DiskMapMetalView *map = h.controller.canvasController.mapView;
 
     h.controller.window.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
-    spinFor(0.15);
+    spinFor(0.4);
     const MTLClearColor dark = map.clearColor;
     const uint64_t framesDark = map.renderedFrameCount;
     h.controller.window.appearance = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
-    spinFor(0.15);
+    // Wait for the redraw itself rather than for a fixed time: a busy machine may take a while.
+    const bool redrawn = spinUntil(5.0, ^bool {
+        return map.renderedFrameCount > framesDark;
+    });
     const MTLClearColor light = map.clearColor;
-    CHECK(dark.red < 0.3 && light.red > 0.7);            // the canvas followed the appearance
-    CHECK(map.renderedFrameCount > framesDark);          // and was redrawn for it, once
+    CHECK(dark.red < 0.3 && light.red > 0.7);  // the canvas followed the appearance
+    CHECK(redrawn);                            // and was redrawn for it
     spinFor(0.5);
     const uint64_t settled = map.renderedFrameCount;
     spinFor(0.5);

@@ -84,6 +84,20 @@ void spinFor(double seconds) {
     }
 }
 
+/// Waits until the map has drawn nothing for `seconds`, so that a frame that lands late on a busy
+/// machine is not taken for one the test caused. False if the map never goes quiet.
+bool waitUntilQuiet(DiskMapMetalView *map, double seconds) {
+    __block uint64_t frames = map.renderedFrameCount;
+    __block CFAbsoluteTime since = CFAbsoluteTimeGetCurrent();
+    return spinUntil(10.0, ^bool {
+        if (map.isAnimating || map.renderedFrameCount != frames) {
+            frames = map.renderedFrameCount;
+            since = CFAbsoluteTimeGetCurrent();
+        }
+        return CFAbsoluteTimeGetCurrent() - since >= seconds;
+    });
+}
+
 /// A scratch directory tree with known contents.
 class Fixture {
 public:
@@ -557,10 +571,12 @@ DP_TEST(selection_and_hover_stay_in_step_between_tree_and_canvas) {
     CHECK(hud.hidden);
 
     // Hovering a row in the tree is forwarded to the canvas (external hover highlight).
+    REQUIRE(waitUntilQuiet(map, 0.2));  // the pointer leaving the map drew a frame of its own
     const uint64_t framesBefore = map.renderedFrameCount;
     [h.controller.outlineController.actionHandler nodeSource:h.controller.outlineController didHoverNode:movies];
-    spinFor(0.1);
-    CHECK(map.renderedFrameCount > framesBefore);  // exactly the highlight frame(s)
+    CHECK(spinUntil(5.0, ^bool {
+        return map.renderedFrameCount > framesBefore;  // the highlight
+    }));
 
     // Selecting something outside the zoomed-in area zooms out just far enough to show it.
     [h.controller setFocusNode:movies animated:NO];
@@ -614,20 +630,23 @@ DP_TEST(columns_stay_aligned_when_deep_folders_widen_the_name_column) {
         }
         return same && compared >= 5;
     };
-    spinFor(0.3);  // the rows are on screen before anything is revealed
-    CHECK(aligned());
+    // The wait lets deferred layout run; a slow machine then gets longer to finish it.
+    const auto becomesAligned = [&] {
+        spinFor(0.3);
+        return spinUntil(5.0, ^bool {
+            return aligned();
+        });
+    };
+    CHECK(becomesAligned());  // the rows are on screen before anything is revealed
     [h.controller selectNode:third];
-    spinFor(0.3);
-    CHECK(aligned());
+    CHECK(becomesAligned());
     [h.controller selectNode:h.arena().firstChild(node)];  // reveals the rest at once
-    spinFor(0.3);
-    CHECK(outline.outlineTableColumn.width > widthBefore);  // it did widen…
-    CHECK(aligned());                                       // …and every row moved with it
+    CHECK(becomesAligned());                                // every row moved with the column…
+    CHECK(outline.outlineTableColumn.width > widthBefore);  // …and it did widen
     // The same through a single expansion by hand.
     REQUIRE(h.scan(fixture.path()));
     for (NSInteger row = 0; row < outline.numberOfRows; ++row) [outline expandItem:[outline itemAtRow:row]];
-    spinFor(0.4);
-    CHECK(aligned());
+    CHECK(becomesAligned());
 }
 
 DP_TEST(drill_down_and_zoom_out_follow_the_breadcrumb) {
@@ -1185,7 +1204,7 @@ DP_TEST(rendering_is_event_driven_and_idle_draws_nothing) {
     DiskMapMetalView *map = h.controller.canvasController.mapView;
     CHECK(map.isPaused);                 // the view never runs a timer of its own
     CHECK(map.enableSetNeedsDisplay);
-    spinFor(0.3);                        // let the reveal animation's last frame land
+    REQUIRE(waitUntilQuiet(map, 0.3));   // let the reveal animation's last frame land
     REQUIRE(!map.isAnimating);
 
     // Idle: a full second of run-loop time renders not a single frame.
@@ -1197,9 +1216,11 @@ DP_TEST(rendering_is_event_driven_and_idle_draws_nothing) {
     // A hover change costs a frame or two, then it is quiet again.
     const NSRect block = [map rectForNode:h.node("Movies/holiday.mov")];
     [map mouseMoved:mouseEvent(NSEventTypeMouseMoved, map, centreOf(block), 0)];
-    spinFor(0.25);
+    CHECK(spinUntil(5.0, ^bool {
+        return map.renderedFrameCount > idleStart;
+    }));
+    REQUIRE(waitUntilQuiet(map, 0.25));
     const uint64_t afterHover = map.renderedFrameCount;
-    CHECK(afterHover > idleStart);
     CHECK(afterHover - idleStart <= 3);
     spinFor(0.6);
     CHECK_EQ(map.renderedFrameCount, afterHover);
@@ -1220,7 +1241,7 @@ DP_TEST(rendering_is_event_driven_and_idle_draws_nothing) {
     const uint64_t animationFrames = map.renderedFrameCount - afterHover;
     CHECK(animationSeconds > 0.15 && animationSeconds < (dptest::onCI() ? 3.0 : 1.0));
     CHECK(animationFrames >= (dptest::onCI() ? 2u : 8u));  // ~17 at 60 Hz, ~34 at 120 Hz
-    spinFor(0.2);
+    REQUIRE(waitUntilQuiet(map, 0.2));
     const uint64_t settled = map.renderedFrameCount;
     spinFor(1.0);
     CHECK_EQ(map.renderedFrameCount, settled);  // the display link is gone: silence again
@@ -1240,18 +1261,21 @@ DP_TEST(appearance_change_recolours_the_canvas) {
     DiskMapMetalView *map = h.controller.canvasController.mapView;
 
     h.controller.window.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
-    spinFor(0.4);
+    spinUntil(5.0, ^bool {
+        return map.clearColor.red < 0.3;
+    });
+    REQUIRE(waitUntilQuiet(map, 0.4));
     const MTLClearColor dark = map.clearColor;
     const uint64_t framesDark = map.renderedFrameCount;
     h.controller.window.appearance = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
     // Wait for the redraw itself rather than for a fixed time: a busy machine may take a while.
     const bool redrawn = spinUntil(5.0, ^bool {
-        return map.renderedFrameCount > framesDark;
+        return map.renderedFrameCount > framesDark && map.clearColor.red > 0.7;
     });
     const MTLClearColor light = map.clearColor;
     CHECK(dark.red < 0.3 && light.red > 0.7);  // the canvas followed the appearance
     CHECK(redrawn);                            // and was redrawn for it
-    spinFor(0.5);
+    REQUIRE(waitUntilQuiet(map, 0.5));
     const uint64_t settled = map.renderedFrameCount;
     spinFor(0.5);
     CHECK_EQ(map.renderedFrameCount, settled);

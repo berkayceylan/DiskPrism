@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<title>DiskPrism: a 612 KiB disk space analyzer for macOS</title>
+<meta name="description" content="Native macOS disk space analyzer in C++20, AppKit and Metal. Scans with getattrlistbulk, draws a cushion treemap or sunburst in one GPU draw call, and idles at 0%.">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#14151a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f5f6f9" media="(prefers-color-scheme: light)">
+<meta property="og:type" content="website">
+<meta property="og:title" content="DiskPrism">
+<meta property="og:description" content="A 612 KiB native macOS disk space analyzer: getattrlistbulk scanning, Metal cushion treemap and sunburst.">
+<meta property="og:url" content="https://berkayceylan.github.io/DiskPrism/">
+<meta property="og:image" content="https://berkayceylan.github.io/DiskPrism/assets/img/social.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://berkayceylan.github.io/DiskPrism/">
+<link rel="icon" type="image/png" href="assets/img/icon-64.png">
+<link rel="apple-touch-icon" href="assets/img/icon-180.png">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="styles.css">
+<link rel="modulepreload" href="demo/demo.js">
+<script type="module" src="site.js"></script>
+</head>
+<body>
+<svg width="0" height="0" class="sprite" aria-hidden="true">
+  <symbol id="i-folder" viewBox="0 0 16 16"><path d="M1.5 4.2c0-.9.7-1.7 1.7-1.7h2.9c.4 0 .9.2 1.2.5l1 1h4.5c1 0 1.7.8 1.7 1.7v6.1c0 1-.7 1.7-1.7 1.7H3.2c-1 0-1.7-.7-1.7-1.7z" fill="currentColor"/></symbol>
+  <symbol id="i-file" viewBox="0 0 16 16"><path d="M4 1.5h5.2L13 5.3v8.2c0 .6-.4 1-1 1H4c-.6 0-1-.4-1-1v-11c0-.6.4-1 1-1z" fill="currentColor" opacity=".55"/><path d="M9.2 1.5 13 5.3H9.2z" fill="currentColor"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 16 16"><path d="M4.6 12.5a3.1 3.1 0 0 1-.4-6.2 4 4 0 0 1 7.7 1 2.6 2.6 0 0 1-.3 5.2z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+  <symbol id="i-link" viewBox="0 0 16 16"><path d="M6.7 9.3 9.3 6.7M7.4 4.9l1.4-1.4a2.6 2.6 0 0 1 3.7 3.7l-1.4 1.4M8.6 11.1l-1.4 1.4a2.6 2.6 0 0 1-3.7-3.7l1.4-1.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-sparse" viewBox="0 0 16 16"><path d="M2 3h3v10H2zM11 3h3v10h-3z" fill="currentColor"/><path d="M6.5 3h3v10h-3z" fill="none" stroke="currentColor" stroke-dasharray="1.5 1.5"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6 13 13M13 3l-1.4 1.4M4.4 11.6 3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 16 16"><path d="M13.4 10A6 6 0 0 1 6 2.6a6 6 0 1 0 7.4 7.4z" fill="currentColor"/></symbol>
+  <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" d="M8 .2a8 8 0 0 0-2.5 15.6c.4.1.5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.3.7.1-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.7-3.7 3.9.3.3.6.8.6 1.5v2.2c0 .2.1.5.5.4A8 8 0 0 0 8 .2"/></symbol>
+</svg>
+
+<a class="skip" href="#main">Skip to content</a>
+<header class="nav">
+  <div class="wrap nav-row">
+    <a class="brand" href="#top"><img src="assets/img/icon-64.png" width="28" height="28" alt=""><span>DiskPrism</span></a>
+    <nav aria-label="Sections">
+      <a href="#demo">Demo</a>
+      <a href="#benchmarks">Benchmarks</a>
+      <a href="#how">How it works</a>
+      <a href="#build">Build</a>
+    </nav>
+    <button class="icon-button" id="theme" type="button" aria-label="Switch theme"><svg class="icon sun" aria-hidden="true"><use href="#i-sun"/></svg><svg class="icon moon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+    <a class="button small" href="https://github.com/berkayceylan/DiskPrism"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg><span>GitHub</span></a>
+  </div>
+</header>
+
+<main id="main">
+<section class="hero wrap" id="top">
+  <div class="hero-text">
+    <img class="hero-icon" src="assets/img/icon-180.png" width="84" height="84" alt="DiskPrism app icon">
+    <h1>The disk map that fits in 612&nbsp;KiB</h1>
+    <p class="lede">DiskPrism is a native macOS disk space analyzer. It scans with <code>getattrlistbulk</code>, draws a cushion treemap or a sunburst with Metal, and goes completely quiet when you stop moving.</p>
+    <div class="actions">
+      <a class="button primary" href="https://github.com/berkayceylan/DiskPrism"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>View on GitHub</a>
+      <a class="button" href="#demo">Try the live demo</a>
+      <a class="button" href="#build">Build from source</a>
+    </div>
+  </div>
+  <dl class="facts">
+    <div><dt>Complete app bundle, no dependencies</dt><dd>612 <small>KiB</small></dd></div>
+    <div><dt>Files scanned per second</dt><dd>454,024</dd></div>
+    <div><dt>Draw calls for 47,841 blocks</dt><dd>1</dd></div>
+    <div><dt>CPU and GPU when idle</dt><dd>0<small>%</small></dd></div>
+  </dl>
+  <figure class="gallery" id="gallery">
+    <div class="gallery-frame"><img src="assets/img/window-treemap-dark-1440.webp" srcset="assets/img/window-treemap-dark-1440.webp 1440w, assets/img/window-treemap-dark.webp 2880w" sizes="(min-width: 1240px) 1160px, 94vw" width="2880" height="1660" alt="DiskPrism treemap in dark mode" fetchpriority="high" decoding="async"></div>
+    <div class="gallery-controls">
+      <div class="seg" role="group" aria-label="Visualization"><button type="button" data-set="view" data-value="treemap">Treemap</button><button type="button" data-set="view" data-value="sunburst">Sunburst</button></div>
+      <div class="seg" role="group" aria-label="Appearance"><button type="button" data-set="look" data-value="dark">Dark</button><button type="button" data-set="look" data-value="light">Light</button></div>
+      <div class="seg" role="group" aria-label="Screenshot type"><button type="button" data-set="frame" data-value="window">App window</button><button type="button" data-set="frame" data-value="canvas">Canvas</button></div>
+      <figcaption>The app window, showing a synthetic folder tree.</figcaption>
+    </div>
+  </figure>
+</section>
+
+<section class="wrap section" id="demo">
+  <header class="section-head">
+    <h2>Try it here</h2>
+    <p>The same layouts and shaders, ported to WebGL. The tree is made up: 4,627 files, 35 of them in iCloud only, a few hard-linked between two apps, and two sparse disk images. Click a folder to open it. Switch to Logical and back to see the cloud files appear and collapse.</p>
+  </header>
+  <div class="rig" id="rig">
+    <div class="rig-bar">
+      <div class="seg" role="group" aria-label="Visualization"><button type="button" data-mode="treemap" aria-pressed="true">Treemap</button><button type="button" data-mode="sunburst" aria-pressed="false">Sunburst</button></div>
+      <div class="seg" role="group" aria-label="Size metric"><button type="button" data-metric="physical" aria-pressed="true">Physical (Disk)</button><button type="button" data-metric="logical" aria-pressed="false">Logical</button></div>
+      <div class="pill"><span class="pill-dot" id="rig-dot"></span><span id="rig-status">Loading the demo</span></div>
+    </div>
+    <div class="rig-body">
+      <div class="pane contents-pane">
+        <h3>Contents</h3>
+        <ol class="list" id="contents"></ol>
+      </div>
+      <div class="stage-pane">
+        <div class="crumb-bar"><nav aria-label="Current folder"><ol class="crumbs" id="crumbs"></ol></nav><span class="rig-total" id="rig-total"></span></div>
+        <div class="stage" id="stage">
+          <canvas id="map" tabindex="0" role="img" aria-label="Disk usage map. Use the arrow keys to move between items, Return to open a folder and Escape to go back."></canvas>
+          <button class="hub" id="hub" type="button" hidden><span id="hub-name"></span><strong id="hub-size"></strong></button>
+          <div class="map-empty" id="map-empty" hidden><p><strong>0 B on this disk</strong>Everything in this folder is stored in iCloud.</p><button class="button small" id="empty-logical" type="button">Show logical sizes</button></div>
+          <div class="hud" id="hud" hidden>
+            <strong id="hud-title"></strong>
+            <span class="hud-path" id="hud-path"></span>
+            <dl>
+              <div><dt>On disk</dt><dd id="hud-physical"></dd></div>
+              <div><dt>Logical size</dt><dd id="hud-logical"></dd></div>
+              <div><dt>Share of parent</dt><dd id="hud-share"></dd></div>
+              <div><dt id="hud-kind-label">Type</dt><dd id="hud-kind"></dd></div>
+            </dl>
+            <p class="hud-status" id="hud-status" hidden></p>
+          </div>
+        </div>
+        <p class="rig-note" id="rig-note"></p>
+        <p class="visually-hidden" id="map-live" aria-live="polite"></p>
+      </div>
+      <div class="pane types-pane">
+        <h3><span id="types-title">File types</span><button type="button" class="clear" id="types-clear" hidden>Clear</button></h3>
+        <ol class="list" id="types"></ol>
+      </div>
+    </div>
+    <p class="rig-failed">The demo could not start in this browser. The screenshots above show the same views.</p>
+  </div>
+</section>
+
+<section class="wrap section" id="benchmarks">
+  <header class="section-head">
+    <h2>Benchmarks</h2>
+    <p>Measured on an Apple M2 with 8&nbsp;GB, Release build, warm disk cache. Run <code>--benchmark</code> to get the numbers for your own Mac.</p>
+  </header>
+
+  <div class="bench">
+    <div class="bench-chart">
+      <h3>Scanning /Applications <span>224,913 files in 47,003 folders</span></h3>
+      <div class="bars" role="img" aria-label="Scan time. DiskPrism with 8 threads: 0.495 seconds. DiskPrism with 1 thread: 1.43 seconds. Apple du: 4.97 seconds on the first run, 3.86 to 7.02 seconds over nine more.">
+        <div class="bar-row main"><span class="bar-label">DiskPrism</span><span class="track"><span class="span span-dp"></span><span class="fill fill-dp"></span></span><span class="bar-value">0.495 s</span><span class="bar-note">8 threads, median of 15 runs (0.48 to 0.66)</span></div>
+        <div class="bar-row"><span class="bar-label">DiskPrism</span><span class="track"><span class="span span-one"></span><span class="fill fill-one"></span></span><span class="bar-value">1.43 s</span><span class="bar-note">1 thread, best (1.43 to 1.75)</span></div>
+        <div class="bar-row other"><span class="bar-label">du</span><span class="track"><span class="span span-du"></span><span class="fill fill-du"></span><span class="tick tick-du"></span></span><span class="bar-value">4.97 s</span><span class="bar-note">first run, marked; nine more took 3.86 to 7.02</span></div>
+      </div>
+      <p class="fine">Solid bars end at the fastest run, hatching at the slowest. That makes DiskPrism about 10&times; faster than <code>du -sk</code>: 8&times; comparing the fastest runs and 14&times; comparing medians. <code>du</code> uses one thread. Peak memory was 35&nbsp;MB.</p>
+    </div>
+
+    <div class="bench-bundle">
+      <h3>The whole app <span>612 KiB on disk</span></h3>
+      <div class="bundle" role="img" aria-label="Bundle contents by size: executable 435,744 bytes, icon 163,596, shader source 14,180, signature 2,678, Info.plist 2,243">
+        <span class="part part-exe"></span><span class="part part-icon"></span><span class="part part-shader"></span><span class="part part-sig"></span><span class="part part-plist"></span>
+      </div>
+      <dl class="legend">
+        <div><dt><i class="key k-exe"></i>Executable, arm64</dt><dd>435,744 B</dd></div>
+        <div><dt><i class="key k-icon"></i>App icon</dt><dd>163,596 B</dd></div>
+        <div><dt><i class="key k-shader"></i>Shaders.metal, as source</dt><dd>14,180 B</dd></div>
+        <div><dt><i class="key k-sig"></i>Signature and Info.plist</dt><dd>4,921 B</dd></div>
+      </dl>
+    </div>
+  </div>
+
+  <div class="readouts">
+    <div><h3>Whole disk</h3><dl>
+      <div><dt>Files</dt><dd>2,046,512</dd></div><div><dt>Folders</dt><dd>520,131</dd></div><div><dt>Time</dt><dd>9.4 s</dd></div><div><dt>Peak memory</dt><dd>192 MB</dd></div><div><dt>Inodes counted twice</dt><dd>0</dd></div></dl></div>
+    <div><h3>Drawing</h3><dl>
+      <div><dt>Nodes</dt><dd>440,000</dd></div><div><dt>Blocks drawn</dt><dd>47,841</dd></div><div><dt>Draw calls</dt><dd>1</dd></div><div><dt>GPU time, 2880&times;1800</dt><dd>1.8 ms</dd></div><div><dt>Layout</dt><dd>9 to 11 ms</dd></div></dl></div>
+    <div><h3>Interaction</h3><dl>
+      <div><dt>Hit test, treemap</dt><dd>59 ns</dd></div><div><dt>Hit test, sunburst</dt><dd>97 ns</dd></div><div><dt>Hover to read-out</dt><dd>0.56 ms</dd></div><div><dt>Frames per second, idle</dt><dd>0</dd></div><div><dt>CPU, idle</dt><dd>0.0%</dd></div></dl></div>
+    <div><h3>Correctness</h3><dl>
+      <div><dt>CTest</dt><dd>17 of 17</dd></div><div><dt>Checks</dt><dd>28,500+</dd></div><div><dt>Fuzzed kernel buffers</dt><dd>20,000</dd></div><div><dt>ASan, UBSan, TSan reports</dt><dd>0</dd></div><div><dt>Leaks, core and live app</dt><dd>0</dd></div></dl></div>
+  </div>
+  <p class="fine">The inode check compared every path of the whole-disk scan: 2,006,687 single-link files and 520,932 folders. Idle means zero frames submitted, so the GPU has nothing to do.</p>
+</section>
+
+<section class="wrap section" id="how">
+  <header class="section-head">
+    <h2>Four decisions behind the numbers</h2>
+  </header>
+
+  <article class="decision">
+    <div class="decision-text">
+      <h3>Ask the kernel for a whole directory at once</h3>
+      <p><code>getattrlistbulk</code> returns names, sizes, dates, flags and link counts for a batch of entries in one call. A pool of work-stealing threads decodes each 128&nbsp;KiB buffer with bounds checks and <code>memcpy</code>, because 8-byte fields sit on 4-byte boundaries.</p>
+      <p>macOS gives <code>/</code> and <code>/System/Volumes/Data</code> the same device ID, so comparing <code>st_dev</code> would count your files twice. Three checks keep a scan on its volume:</p>
+      <ol class="checks">
+        <li><strong>Mount status</strong> of each entry, from <code>ATTR_DIR_MOUNTSTATUS</code></li>
+        <li><strong>Mount table</strong>, looked up before a directory is opened</li>
+        <li><strong>Device ID</strong> of every entry in the batch</li>
+      </ol>
+    </div>
+    <figure class="mem">
+      <figcaption>One file record, byte by byte</figcaption>
+      <ol>
+            <li><span class="off">0</span><span class="field">length</span><span class="bytes b4" title="4 bytes"></span><span class="size">4</span></li>
+            <li><span class="off">4</span><span class="field">returned_attrs</span><span class="bytes b20" title="20 bytes"></span><span class="size">20</span></li>
+            <li><span class="off">24</span><span class="field">error</span><span class="bytes b4" title="4 bytes"></span><span class="size">4</span></li>
+            <li><span class="off">28</span><span class="field">name_ref</span><span class="bytes b8" title="8 bytes"></span><span class="size">8</span></li>
+            <li><span class="off">36</span><span class="field">devid</span><span class="bytes b4" title="4 bytes"></span><span class="size">4</span></li>
+            <li><span class="off">40</span><span class="field">objtype</span><span class="bytes b4" title="4 bytes"></span><span class="size">4</span></li>
+            <li><span class="off">44</span><span class="field">modtime</span><span class="bytes b16" title="16 bytes"></span><span class="size">16</span></li>
+            <li><span class="off">60</span><span class="field">flags</span><span class="bytes b4" title="4 bytes"></span><span class="size">4</span></li>
+            <li><span class="off">64</span><span class="field">fileid</span><span class="bytes b8" title="8 bytes"></span><span class="size">8</span></li>
+            <li><span class="off">72</span><span class="field">linkcount</span><span class="bytes b4" title="4 bytes"></span><span class="size">4</span></li>
+            <li><span class="off">76</span><span class="field">allocsize</span><span class="bytes b8" title="8 bytes"></span><span class="size">8</span></li>
+            <li><span class="off">84</span><span class="field">datalength</span><span class="bytes b8" title="8 bytes"></span><span class="size">8</span></li>
+      </ol>
+      <p>92 bytes, then the name. <code>allocsize</code> comes before <code>datalength</code>: the kernel packs by bit value.</p>
+    </figure>
+  </article>
+
+  <article class="decision">
+    <div class="decision-text">
+      <h3>Keep the tree in one array</h3>
+      <p>Every file is a 56-byte record in one contiguous block of virtual memory, linked by 32-bit indices. Names live back to back in a string pool. Threads reserve space with a single atomic step and never invalidate each other's pointers.</p>
+      <p>A parent always comes before its children, so adding up two million sizes is one backward pass. Deleting a file subtracts its size up the ancestor chain and the map updates without a rescan.</p>
+    </div>
+    <figure class="mem">
+      <figcaption>One node of the tree</figcaption>
+      <ol>
+            <li><span class="off">0</span><span class="field">allocated_bytes</span><span class="bytes b8" title="8 bytes"></span><span class="size">8</span></li>
+            <li><span class="off">8</span><span class="field">logical_bytes</span><span class="bytes b8" title="8 bytes"></span><span class="size">8</span></li>
+            <li><span class="off">16</span><span class="field">mtime</span><span class="bytes b8" title="8 bytes"></span><span class="size">8</span></li>
+            <li><span class="off">24</span><span class="field">parent_idx</span><span class="bytes b4" title="4 bytes"></span><span class="size">4</span></li>
+            <li><span class="off">28</span><span class="field">first_child_idx</span><span class="bytes b4" title="4 bytes"></span><span class="size">4</span></li>
+            <li><span class="off">32</span><span class="field">next_sibling_idx</span><span class="bytes b4" title="4 bytes"></span><span class="size">4</span></li>
+            <li><span class="off">36</span><span class="field">name_offset</span><span class="bytes b4" title="4 bytes"></span><span class="size">4</span></li>
+            <li><span class="off">40</span><span class="field">file_count</span><span class="bytes b4" title="4 bytes"></span><span class="size">4</span></li>
+            <li><span class="off">44</span><span class="field">child_count</span><span class="bytes b4" title="4 bytes"></span><span class="size">4</span></li>
+            <li><span class="off">48</span><span class="field">flags</span><span class="bytes b4" title="4 bytes"></span><span class="size">4</span></li>
+            <li><span class="off">52</span><span class="field">name_len</span><span class="bytes b2" title="2 bytes"></span><span class="size">2</span></li>
+            <li><span class="off">54</span><span class="field">ext_id</span><span class="bytes b2" title="2 bytes"></span><span class="size">2</span></li>
+      </ol>
+      <p>56 bytes. With its name, a file costs about 74.</p>
+    </figure>
+  </article>
+
+  <article class="decision">
+    <div class="decision-text">
+      <h3>Count what is really on the disk</h3>
+      <p>A file's length says little about the space it takes. DiskPrism reads the allocated blocks and treats four cases separately. The scan threads run under an I/O policy that forbids downloading cloud files, and cloud-only folders are never opened.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">In the demo tree</th><th scope="col">Logical</th><th scope="col">On disk</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">iCloud file, not downloaded <code>SF_DATALESS</code></th><td>22.5 GB</td><td>0 B</td></tr>
+          <tr><th scope="row">Second name of a hard-linked library</th><td>417.7 MB</td><td>0 B</td></tr>
+          <tr><th scope="row">Sparse disk image</th><td>68.7 GB</td><td>21.2 GB</td></tr>
+          <tr><th scope="row">Symbolic link</th><td>its own length</td><td>0 B, never followed</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="decision">
+    <div class="decision-text">
+      <h3>Draw everything in one call</h3>
+      <p>Each block carries the coefficients of its cushion: a parabola per nesting level, summed. The fragment shader derives the surface normal from them, so shading needs no textures and no geometry beyond four vertices. The sunburst computes exact polar distances for smooth edges.</p>
+      <p>The shader ships as text and compiles at launch with <code>newLibraryWithSource:</code>, so building needs only the Command Line Tools.</p>
+      <pre><code>[encoder drawPrimitives:MTLPrimitiveTypeTriangleStrip
+            vertexStart:0
+            vertexCount:4
+          instanceCount:<b>47841</b>];</code></pre>
+    </div>
+    <figure class="profile">
+      <svg viewBox="0 0 560 150" role="img" aria-label="Cross-section of a cushion surface: a wide parabola, three narrower ones on top of it, and eight more on top of those">
+        <path class="level l3" d="M0 140.0 L5 132.2 L10 124.9 L15 117.9 L20 111.4 L25 105.2 L30 99.5 L35 94.2 L40 89.2 L45 84.7 L50 80.6 L55 76.8 L60 73.5 L65 70.6 L70 68.1 L75 66.0 L80 64.3 L85 62.9 L90 62.0 L95 61.5 L100 61.4 L105 61.7 L110 62.5 L115 63.6 L120 65.1 L125 64.0 L130 58.3 L135 53.4 L140 49.3 L145 46.0 L150 43.4 L155 41.7 L160 40.7 L165 40.6 L170 41.2 L175 42.6 L180 44.8 L185 47.8 L190 51.6 L195 56.2 L200 61.5 L205 59.5 L210 54.9 L215 51.8 L220 50.1 L225 49.7 L230 50.8 L235 53.4 L240 57.3 L245 62.6 L250 69.4 L255 77.6 L260 78.4 L265 70.7 L270 63.8 L275 57.6 L280 52.1 L285 47.4 L290 43.5 L295 40.3 L300 37.8 L305 36.1 L310 35.1 L315 34.9 L320 35.4 L325 36.7 L330 38.7 L335 41.5 L340 45.0 L345 49.2 L350 47.5 L355 42.0 L360 38.3 L365 36.4 L370 36.4 L375 38.2 L380 41.8 L385 47.2 L390 54.5 L395 63.5 L400 65.9 L405 61.5 L410 59.9 L415 61.2 L420 65.4 L425 72.4 L430 82.2 L435 94.9 L440 93.9 L445 85.1 L450 77.7 L455 71.7 L460 67.1 L465 63.8 L470 61.9 L475 61.4 L480 62.3 L485 64.5 L490 68.1 L495 73.0 L500 79.4 L505 84.4 L510 80.7 L515 78.7 L520 78.5 L525 80.0 L530 83.3 L535 88.3 L540 95.1 L545 103.7 L550 114.1 L555 126.1 L560 140.0 L560 140 L0 140Z"/>
+        <path class="level l2" d="M0 140.0 L5 135.4 L10 130.9 L15 126.5 L20 122.3 L25 118.2 L30 114.2 L35 110.4 L40 106.8 L45 103.2 L50 99.9 L55 96.6 L60 93.5 L65 90.5 L70 87.7 L75 85.0 L80 82.5 L85 80.1 L90 77.8 L95 75.7 L100 73.7 L105 71.8 L110 70.1 L115 68.5 L120 67.1 L125 65.8 L130 64.6 L135 63.6 L140 62.8 L145 62.0 L150 61.4 L155 61.0 L160 60.6 L165 60.5 L170 60.4 L175 60.5 L180 60.8 L185 61.1 L190 61.7 L195 62.3 L200 63.1 L205 64.1 L210 65.1 L215 66.4 L220 67.7 L225 69.2 L230 70.8 L235 72.6 L240 74.5 L245 76.6 L250 78.8 L255 81.1 L260 80.5 L265 76.8 L270 73.3 L275 70.1 L280 67.1 L285 64.4 L290 61.9 L295 59.7 L300 57.7 L305 56.0 L310 54.5 L315 53.3 L320 52.3 L325 51.6 L330 51.1 L335 50.9 L340 50.9 L345 51.1 L350 51.7 L355 52.4 L360 53.4 L365 54.7 L370 56.2 L375 57.9 L380 60.0 L385 62.2 L390 64.7 L395 67.5 L400 70.5 L405 73.7 L410 77.2 L415 81.0 L420 84.9 L425 89.2 L430 93.7 L435 98.4 L440 97.5 L445 93.7 L450 90.4 L455 87.5 L460 85.2 L465 83.3 L470 81.9 L475 81.0 L480 80.6 L485 80.7 L490 81.3 L495 82.3 L500 83.8 L505 85.8 L510 88.3 L515 91.3 L520 94.8 L525 98.7 L530 103.2 L535 108.1 L540 113.5 L545 119.4 L550 125.8 L555 132.7 L560 140.0 L560 140 L0 140Z"/>
+        <path class="level l1" d="M0 140.0 L5 137.9 L10 135.9 L15 134.0 L20 132.0 L25 130.1 L30 128.2 L35 126.4 L40 124.6 L45 122.9 L50 121.1 L55 119.5 L60 117.8 L65 116.2 L70 114.6 L75 113.1 L80 111.6 L85 110.1 L90 108.7 L95 107.3 L100 106.0 L105 104.7 L110 103.4 L115 102.1 L120 100.9 L125 99.8 L130 98.6 L135 97.6 L140 96.5 L145 95.5 L150 94.5 L155 93.6 L160 92.7 L165 91.8 L170 91.0 L175 90.2 L180 89.4 L185 88.7 L190 88.0 L195 87.3 L200 86.7 L205 86.2 L210 85.6 L215 85.1 L220 84.7 L225 84.2 L230 83.8 L235 83.5 L240 83.2 L245 82.9 L250 82.7 L255 82.5 L260 82.3 L265 82.2 L270 82.1 L275 82.0 L280 82.0 L285 82.0 L290 82.1 L295 82.2 L300 82.3 L305 82.5 L310 82.7 L315 82.9 L320 83.2 L325 83.5 L330 83.8 L335 84.2 L340 84.7 L345 85.1 L350 85.6 L355 86.2 L360 86.7 L365 87.3 L370 88.0 L375 88.7 L380 89.4 L385 90.2 L390 91.0 L395 91.8 L400 92.7 L405 93.6 L410 94.5 L415 95.5 L420 96.5 L425 97.6 L430 98.6 L435 99.8 L440 100.9 L445 102.1 L450 103.4 L455 104.7 L460 106.0 L465 107.3 L470 108.7 L475 110.1 L480 111.6 L485 113.1 L490 114.6 L495 116.2 L500 117.8 L505 119.5 L510 121.1 L515 122.9 L520 124.6 L525 126.4 L530 128.2 L535 130.1 L540 132.0 L545 134.0 L550 135.9 L555 137.9 L560 140.0 L560 140 L0 140Z"/>
+      </svg>
+      <figcaption>Cross-section of a cushion: one parabola for the folder, one for each subfolder, one for each file.</figcaption>
+    </figure>
+  </article>
+</section>
+
+<section class="wrap section" id="build">
+  <header class="section-head">
+    <h2>Build from source</h2>
+    <p>You need macOS 14 or later, CMake 3.24 or later, and the Command Line Tools (<code>xcode-select --install</code>). Xcode is not required.</p>
+  </header>
+  <div class="steps">
+    <div><h3>Get the code</h3><div class="command"><code>git clone https://github.com/berkayceylan/DiskPrism.git</code><button type="button">Copy</button></div><div class="command"><code>cd DiskPrism</code><button type="button">Copy</button></div></div>
+    <div><h3>Build</h3><div class="command"><code>cmake -S . -B build -DCMAKE_BUILD_TYPE=Release</code><button type="button">Copy</button></div><div class="command"><code>cmake --build build -j</code><button type="button">Copy</button></div></div>
+    <div><h3>Launch</h3><div class="command"><code>open build/DiskPrism.app</code><button type="button">Copy</button></div></div>
+    <div><h3>Benchmark your Mac</h3><div class="command"><code>build/DiskPrism.app/Contents/MacOS/DiskPrism --benchmark /Applications --runs 5</code><button type="button">Copy</button></div></div>
+    <div><h3>Run the tests</h3><div class="command"><code>ctest --test-dir build --output-on-failure</code><button type="button">Copy</button></div></div>
+  </div>
+  <div class="notes">
+    <div><h3>Signing</h3><p>The build signs the app ad hoc, on your own Mac. An app you build yourself opens normally. If you copy it to another Mac, Gatekeeper will ask for confirmation there.</p></div>
+    <div><h3>Full Disk Access</h3><p>DiskPrism works without it. macOS then hides some protected folders, and the app tells you how many it skipped. If you grant it, macOS ties the permission to that build and may ask again after you rebuild.</p></div>
+    <div><h3>If the C++ headers are missing</h3><p>Some Command Line Tools updates leave a stale <code>usr/include/c++</code> folder behind that hides the real headers. CMake detects this, warns, and builds against the SDK's headers.</p></div>
+  </div>
+</section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-row">
+    <span class="brand"><img src="assets/img/icon-64.png" width="22" height="22" alt="" loading="lazy"><span>DiskPrism</span></span>
+    <nav aria-label="Project links">
+      <a href="https://github.com/berkayceylan/DiskPrism">GitHub</a>
+      <a href="https://github.com/berkayceylan/DiskPrism/issues">Issues</a>
+      <a href="https://github.com/berkayceylan/DiskPrism/blob/main/LICENSE">MIT License</a>
+      <a href="https://github.com/berkayceylan/DiskPrism#readme">README</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

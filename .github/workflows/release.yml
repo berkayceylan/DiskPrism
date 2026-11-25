@@ -1,0 +1,102 @@
+name: Release
+
+# Pushing a tag such as v1.0.0 builds, tests and publishes that version. A manual run builds
+# and tests the same packages and publishes nothing.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Package ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-26
+          - arch: x86_64
+            runner: macos-26-intel
+    env:
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure
+        run: |
+          sw_vers
+          clang++ --version | head -1
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="$ARCH"
+          version=$(sed -n 's/^CMAKE_PROJECT_VERSION:STATIC=//p' build/CMakeCache.txt)
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::The tag is $GITHUB_REF_NAME, but CMakeLists.txt says version $version."
+            exit 1
+          fi
+      - name: Build
+        run: cmake --build build -j "$(sysctl -n hw.ncpu)"
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Package
+        run: ditto -c -k --norsrc --keepParent build/DiskPrism.app "DiskPrism-$VERSION-$ARCH.zip"
+      # What is checked here is the unpacked zip, i.e. the app as somebody will download it.
+      - name: Check the package
+        run: |
+          ditto -x -k "DiskPrism-$VERSION-$ARCH.zip" unpacked
+          app=unpacked/DiskPrism.app
+          exe=$app/Contents/MacOS/DiskPrism
+          codesign --verify --deep --strict --verbose=2 "$app"
+          [ "$(lipo -archs "$exe")" = "$ARCH" ]
+          [ "$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")" = "$VERSION" ]
+          [ "$("$exe" --version)" = "DiskPrism $VERSION" ]
+          if strings -a "$exe" | grep -F "$GITHUB_WORKSPACE"; then
+            echo "::error::The executable contains paths of the machine that built it."
+            exit 1
+          fi
+          du -sk "$app"
+          shasum -a 256 "DiskPrism-$VERSION-$ARCH.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: DiskPrism-${{ matrix.arch }}
+          path: DiskPrism-*.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    if: github.event_name == 'push'
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: packages
+          merge-multiple: true
+      # The notes are this version's section of CHANGELOG.md, then the install instructions.
+      - name: Write the release notes
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          awk -v version="$version" '/^## / { found = ($2 == version); next } found' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::CHANGELOG.md has no section for $version."
+            exit 1
+          fi
+          cat .github/release-install.md >> notes.md
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "DiskPrism $version" --notes-file notes.md \
+            "packages/DiskPrism-$version-arm64.zip#DiskPrism $version for Apple silicon (arm64)" \
+            "packages/DiskPrism-$version-x86_64.zip#DiskPrism $version for Intel (x86_64)"

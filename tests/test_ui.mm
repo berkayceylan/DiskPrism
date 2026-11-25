@@ -1208,10 +1208,11 @@ DP_TEST(rendering_is_event_driven_and_idle_draws_nothing) {
     spinFor(0.2);
     CHECK_EQ(map.renderedFrameCount, afterHover);
 
-    // A drill-down animates at display rate for ~0.3 s and then stops by itself.
+    // A drill-down animates at display rate for ~0.3 s and then stops by itself. Its clock starts
+    // inside this call, which also updates the tree, so the measurement has to start before it.
+    const CFAbsoluteTime started = CFAbsoluteTimeGetCurrent();
     [h.controller setFocusNode:h.node("Movies") animated:YES];
     CHECK(map.isAnimating);
-    const CFAbsoluteTime started = CFAbsoluteTimeGetCurrent();
     REQUIRE(spinUntil(3.0, ^bool {
         return !map.isAnimating;
     }));

@@ -442,10 +442,11 @@ DP_TEST(scan_fills_tree_canvas_and_type_list) {
     CHECK_EQ(static_cast<NSNumber *>(item).unsignedIntValue, movies);
     const id boxedAgain = @(movies);
     CHECK(item == boxedAgain);  // identical pointer: the value lives in the pointer itself
+    const auto itemBits = reinterpret_cast<uintptr_t>((__bridge void *)item);
 #if defined(__arm64__)
-    CHECK((reinterpret_cast<uintptr_t>((__bridge void *)item) >> 63) == 1);  // arm64 tagged-pointer bit
+    CHECK((itemBits >> 63) == 1);  // arm64 tagged-pointer bit
 #elif defined(__x86_64__)
-    CHECK((reinterpret_cast<uintptr_t>((__bridge void *)item) & 1) == 1);
+    CHECK((itemBits & 1) == 1);  // x86_64 tagged-pointer bit
 #endif
 
     // Cell contents of the "Movies" row.

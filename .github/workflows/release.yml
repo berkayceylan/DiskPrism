@@ -125,7 +125,8 @@ jobs:
           pattern: package-*
           path: packages
           merge-multiple: true
-      # The notes are this version's section of CHANGELOG.md, then the install instructions.
+      # The notes are this version's section of CHANGELOG.md, then the install instructions. GitHub
+      # keeps line breaks in release notes, so neither file wraps its paragraphs.
       - name: Write the release notes
         run: |
           version=${GITHUB_REF_NAME#v}
